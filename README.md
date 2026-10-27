@@ -24,7 +24,7 @@ Paste up to 100 email addresses to find out if they are **Likely deliverable**, 
 
 ### 1. Clone & Set Up
 ```bash
-git clone https://github.com/<your-username>/email-deliverability-checker.git
+git clone https://github.com/akhildragon-07/Shield_X
 cd email-deliverability-checker
 
 # Create virtual environment

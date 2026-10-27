@@ -16,13 +16,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const countDeliverable = document.getElementById("countDeliverable");
   const countBounce = document.getElementById("countBounce");
   const countUnknown = document.getElementById("countUnknown");
+  const pctDeliverable = document.getElementById("pctDeliverable");
+  const pctBounce = document.getElementById("pctBounce");
+  const pctUnknown = document.getElementById("pctUnknown");
 
   const resultsTableBody = document.getElementById("resultsTableBody");
   const resultsCountSubtitle = document.getElementById("resultsCountSubtitle");
   const downloadCsvBtn = document.getElementById("downloadCsvBtn");
   const clearResultsBtn = document.getElementById("clearResultsBtn");
   const tableSearchInput = document.getElementById("tableSearchInput");
-  const filterPills = document.querySelectorAll(".filter-pill");
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const kpiCards = document.querySelectorAll(".kpi-card");
+  const chipBtns = document.querySelectorAll(".chip-btn");
 
   let currentResults = [];
   let currentFilter = "all";
@@ -30,22 +35,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const MAX_LIMIT = 100;
 
   const SAMPLE_EMAILS = [
-    "contact@github.com",
-    "invalid-format-missing-at-sign",
+    "support@github.com",
+    "contact@python.org",
+    "invalid-format-no-at-sign",
     "admin@cloudflare.com",
-    "alice@definitely-does-not-exist-xyz9874321.org",
-    "support@python.org",
-    "double..dots@example.com",
+    "user@definitely-does-not-exist-xyz9874321.org",
+    "test..double.dots@example.com",
     "info@wikipedia.org"
   ].join("\n");
 
   function extractEmails(text) {
     if (!text) return [];
-    const rawTokens = text.replace(/,/g, "\n").replace(/;/g, "\n").split("\n");
+    const tokens = text.replace(/,/g, "\n").replace(/;/g, "\n").split("\n");
     const seen = new Set();
     const result = [];
 
-    for (let token of rawTokens) {
+    for (let token of tokens) {
       const clean = token.trim();
       if (clean && !seen.has(clean)) {
         seen.add(clean);
@@ -62,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (count > MAX_LIMIT) {
       emailCounter.classList.add("limit-exceeded");
-      showError(`Batch size exceeded (${count} emails). Maximum allowed is ${MAX_LIMIT}.`);
+      showError(`Maximum limit exceeded. You entered ${count} addresses (maximum allowed is ${MAX_LIMIT}).`);
       checkBtn.disabled = true;
     } else {
       emailCounter.classList.remove("limit-exceeded");
@@ -133,6 +138,20 @@ document.addEventListener("DOMContentLoaded", () => {
     return badge;
   }
 
+  function copyTextToClipboard(text, btnElement) {
+    navigator.clipboard.writeText(text).then(() => {
+      const originalHtml = btnElement.innerHTML;
+      btnElement.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      `;
+      setTimeout(() => {
+        btnElement.innerHTML = originalHtml;
+      }, 1500);
+    }).catch(() => {});
+  }
+
   function renderTableRows() {
     resultsTableBody.innerHTML = "";
 
@@ -142,26 +161,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (currentSearchQuery) {
         const q = currentSearchQuery.toLowerCase();
-        const matchesEmail = item.email.toLowerCase().includes(q);
-        const matchesDomain = (item.domain || "").toLowerCase().includes(q);
-        const matchesReason = (item.reason || "").toLowerCase().includes(q);
-        if (!matchesEmail && !matchesDomain && !matchesReason) {
+        const matchEmail = item.email.toLowerCase().includes(q);
+        const matchDomain = (item.domain || "").toLowerCase().includes(q);
+        const matchReason = (item.reason || "").toLowerCase().includes(q);
+        if (!matchEmail && !matchDomain && !matchReason) {
           return false;
         }
       }
       return true;
     });
 
-    resultsCountSubtitle.textContent = `Showing ${filtered.length} of ${currentResults.length} result(s)`;
+    resultsCountSubtitle.textContent = `${filtered.length} of ${currentResults.length} result(s)`;
 
     if (filtered.length === 0) {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
       td.colSpan = 5;
       td.style.textAlign = "center";
-      td.style.padding = "32px";
-      td.style.color = "var(--text-muted)";
-      td.textContent = "No matching addresses found.";
+      td.style.padding = "36px";
+      td.style.color = "var(--slate-400)";
+      td.textContent = "No email addresses match your filter.";
       tr.appendChild(td);
       resultsTableBody.appendChild(tr);
       return;
@@ -170,27 +189,61 @@ document.addEventListener("DOMContentLoaded", () => {
     filtered.forEach((item, index) => {
       const tr = document.createElement("tr");
 
+      // Column 1: Index
       const tdIndex = document.createElement("td");
+      tdIndex.style.textAlign = "center";
+      tdIndex.style.color = "var(--slate-400)";
+      tdIndex.style.fontSize = "0.75rem";
       tdIndex.textContent = String(index + 1);
-      tdIndex.style.color = "var(--text-muted)";
       tr.appendChild(tdIndex);
 
+      // Column 2: Email Address + Copy icon
       const tdEmail = document.createElement("td");
-      tdEmail.className = "email-cell";
-      tdEmail.textContent = item.email;
+      const emailCol = document.createElement("div");
+      emailCol.className = "email-col";
+
+      const emailSpan = document.createElement("span");
+      emailSpan.className = "email-text";
+      emailSpan.textContent = item.email;
+      emailCol.appendChild(emailSpan);
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "copy-mini-btn";
+      copyBtn.title = "Copy email address";
+      copyBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      `;
+      copyBtn.addEventListener("click", () => copyTextToClipboard(item.email, copyBtn));
+      emailCol.appendChild(copyBtn);
+
+      tdEmail.appendChild(emailCol);
       tr.appendChild(tdEmail);
 
+      // Column 3: Status Badge
       const tdStatus = document.createElement("td");
       tdStatus.appendChild(createStatusBadge(item.status));
       tr.appendChild(tdStatus);
 
+      // Column 4: Mail Server (MX)
       const tdMx = document.createElement("td");
-      tdMx.className = "mx-cell";
-      tdMx.textContent = item.mx_host || "—";
+      if (item.mx_host) {
+        const mxBadge = document.createElement("span");
+        mxBadge.className = "mx-badge";
+        mxBadge.textContent = item.mx_host;
+        tdMx.appendChild(mxBadge);
+      } else {
+        tdMx.textContent = "—";
+        tdMx.style.color = "var(--slate-400)";
+      }
       tr.appendChild(tdMx);
 
+      // Column 5: Reason & Details
       const tdReason = document.createElement("td");
-      tdReason.className = "reason-cell";
+      tdReason.className = "reason-text";
       tdReason.textContent = item.reason || "Checked.";
       tr.appendChild(tdReason);
 
@@ -198,18 +251,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function setActiveFilter(filterName) {
+    currentFilter = filterName;
+    tabBtns.forEach(btn => {
+      if (btn.dataset.filter === filterName) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+    renderTableRows();
+  }
+
   async function handleCheckEmails() {
     hideError();
     const emails = extractEmails(emailInput.value);
 
     if (emails.length === 0) {
-      showError("Please enter at least one email address.");
+      showError("Please enter at least one email address to check.");
       emailInput.focus();
       return;
     }
 
     if (emails.length > MAX_LIMIT) {
-      showError(`Maximum limit is ${MAX_LIMIT} emails.`);
+      showError(`Batch size exceeded. You entered ${emails.length} addresses, but the maximum is ${MAX_LIMIT}.`);
       return;
     }
 
@@ -224,30 +289,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to check emails.");
+        throw new Error(data.error || "Server error while evaluating emails.");
       }
 
-      countTotal.textContent = String(data.summary.total);
-      countDeliverable.textContent = String(data.summary.deliverable);
-      countBounce.textContent = String(data.summary.bounce);
-      countUnknown.textContent = String(data.summary.unknown);
+      const total = data.summary.total || 0;
+      const deliverable = data.summary.deliverable || 0;
+      const bounce = data.summary.bounce || 0;
+      const unknown = data.summary.unknown || 0;
+
+      countTotal.textContent = String(total);
+      countDeliverable.textContent = String(deliverable);
+      countBounce.textContent = String(bounce);
+      countUnknown.textContent = String(unknown);
+
+      // Calculate percentages
+      pctDeliverable.textContent = total > 0 ? `${Math.round((deliverable / total) * 100)}% of total` : "0% of total";
+      pctBounce.textContent = total > 0 ? `${Math.round((bounce / total) * 100)}% of total` : "0% of total";
+      pctUnknown.textContent = total > 0 ? `${Math.round((unknown / total) * 100)}% of total` : "0% of total";
 
       currentResults = data.results || [];
-      currentFilter = "all";
       currentSearchQuery = "";
       tableSearchInput.value = "";
+      setActiveFilter("all");
 
-      filterPills.forEach(pill => {
-        if (pill.dataset.filter === "all") pill.classList.add("active");
-        else pill.classList.remove("active");
-      });
-
-      renderTableRows();
       resultsSection.style.display = "block";
       resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
-      showError(err.message || "Something went wrong while connecting to the server.");
+      showError(err.message || "Could not complete deliverability verification.");
     } finally {
       setLoading(false);
     }
@@ -255,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function handleDownloadCsv() {
     if (!currentResults || currentResults.length === 0) {
-      showError("No results to download.");
+      showError("No results available to export.");
       return;
     }
 
@@ -267,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!res.ok) {
-        throw new Error("CSV generation failed.");
+        throw new Error("Failed to generate CSV export file.");
       }
 
       const blob = await res.blob();
@@ -284,7 +353,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Event Listeners
   emailInput.addEventListener("input", updateCounter);
+
+  // Quick insert chip buttons
+  chipBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const email = btn.dataset.email;
+      const currentVal = emailInput.value.trim();
+      if (!currentVal) {
+        emailInput.value = email;
+      } else {
+        emailInput.value = currentVal + "\n" + email;
+      }
+      updateCounter();
+      hideError();
+    });
+  });
 
   loadSampleBtn.addEventListener("click", () => {
     emailInput.value = SAMPLE_EMAILS;
@@ -305,6 +390,9 @@ document.addEventListener("DOMContentLoaded", () => {
     countDeliverable.textContent = "0";
     countBounce.textContent = "0";
     countUnknown.textContent = "0";
+    pctDeliverable.textContent = "0% of total";
+    pctBounce.textContent = "0% of total";
+    pctUnknown.textContent = "0% of total";
     resultsTableBody.innerHTML = "";
     hideError();
   });
@@ -312,15 +400,25 @@ document.addEventListener("DOMContentLoaded", () => {
   checkBtn.addEventListener("click", handleCheckEmails);
   downloadCsvBtn.addEventListener("click", handleDownloadCsv);
 
-  filterPills.forEach(pill => {
-    pill.addEventListener("click", () => {
-      filterPills.forEach(p => p.classList.remove("active"));
-      pill.classList.add("active");
-      currentFilter = pill.dataset.filter;
-      renderTableRows();
+  // Filter tabs
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      setActiveFilter(btn.dataset.filter);
     });
   });
 
+  // Clicking a KPI card filters the table directly
+  kpiCards.forEach(card => {
+    card.addEventListener("click", () => {
+      const filter = card.dataset.filter;
+      if (filter) {
+        setActiveFilter(filter);
+        resultsTableBody.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+  });
+
+  // Table search input
   tableSearchInput.addEventListener("input", (e) => {
     currentSearchQuery = e.target.value.trim();
     renderTableRows();
