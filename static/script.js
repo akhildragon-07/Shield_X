@@ -1,10 +1,4 @@
-/**
- * Email Deliverability Checker - Client Application Logic
- * Vanilla JavaScript (zero external dependencies)
- */
-
 document.addEventListener("DOMContentLoaded", () => {
-  // DOM Elements
   const emailInput = document.getElementById("emailInput");
   const emailCounter = document.getElementById("emailCounter");
   const checkBtn = document.getElementById("checkBtn");
@@ -30,13 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const tableSearchInput = document.getElementById("tableSearchInput");
   const filterPills = document.querySelectorAll(".filter-pill");
 
-  // State
   let currentResults = [];
   let currentFilter = "all";
   let currentSearchQuery = "";
   const MAX_LIMIT = 100;
 
-  // Sample addresses for testing all 3 categories
   const SAMPLE_EMAILS = [
     "contact@github.com",
     "invalid-format-missing-at-sign",
@@ -47,12 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "info@wikipedia.org"
   ].join("\n");
 
-  /**
-   * Parse and extract unique non-empty email lines from input text
-   */
   function extractEmails(text) {
     if (!text) return [];
-    // Support newlines, commas, and semicolons as delimiters
     const rawTokens = text.replace(/,/g, "\n").replace(/;/g, "\n").split("\n");
     const seen = new Set();
     const result = [];
@@ -67,9 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  /**
-   * Update character / address counter in UI
-   */
   function updateCounter() {
     const emails = extractEmails(emailInput.value);
     const count = emails.length;
@@ -77,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (count > MAX_LIMIT) {
       emailCounter.classList.add("limit-exceeded");
-      showError(`Maximum limit exceeded. You have entered ${count} unique addresses. Maximum allowed is ${MAX_LIMIT}.`);
+      showError(`Batch size exceeded (${count} emails). Maximum allowed is ${MAX_LIMIT}.`);
       checkBtn.disabled = true;
     } else {
       emailCounter.classList.remove("limit-exceeded");
@@ -86,27 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /**
-   * Show inline error notification
-   */
   function showError(msg) {
     errorMessage.textContent = msg;
     errorAlert.style.display = "flex";
   }
 
-  /**
-   * Hide error notification
-   */
   function hideError() {
     errorAlert.style.display = "none";
     errorMessage.textContent = "";
   }
 
-  /**
-   * Set loading UI state during API verification
-   */
-  function setLoadingState(isLoading) {
-    if (isLoading) {
+  function setLoading(loading) {
+    if (loading) {
       checkBtn.disabled = true;
       loadSampleBtn.disabled = true;
       clearInputBtn.disabled = true;
@@ -128,9 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /**
-   * Generate status badge HTML element
-   */
   function createStatusBadge(status) {
     const badge = document.createElement("span");
     badge.className = "badge";
@@ -160,18 +133,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return badge;
   }
 
-  /**
-   * Render the table rows according to active filter and search query
-   */
   function renderTableRows() {
     resultsTableBody.innerHTML = "";
 
     const filtered = currentResults.filter(item => {
-      // Status filter
       if (currentFilter !== "all" && item.status !== currentFilter) {
         return false;
       }
-      // Search filter
       if (currentSearchQuery) {
         const q = currentSearchQuery.toLowerCase();
         const matchesEmail = item.email.toLowerCase().includes(q);
@@ -193,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
       td.style.textAlign = "center";
       td.style.padding = "32px";
       td.style.color = "var(--text-muted)";
-      td.textContent = "No addresses match your filter criteria.";
+      td.textContent = "No matching addresses found.";
       tr.appendChild(td);
       resultsTableBody.appendChild(tr);
       return;
@@ -202,147 +170,120 @@ document.addEventListener("DOMContentLoaded", () => {
     filtered.forEach((item, index) => {
       const tr = document.createElement("tr");
 
-      // Column 1: Index
       const tdIndex = document.createElement("td");
       tdIndex.textContent = String(index + 1);
       tdIndex.style.color = "var(--text-muted)";
       tr.appendChild(tdIndex);
 
-      // Column 2: Email Address (safely escaped)
       const tdEmail = document.createElement("td");
       tdEmail.className = "email-cell";
       tdEmail.textContent = item.email;
       tr.appendChild(tdEmail);
 
-      // Column 3: Status Badge
       const tdStatus = document.createElement("td");
       tdStatus.appendChild(createStatusBadge(item.status));
       tr.appendChild(tdStatus);
 
-      // Column 4: Mail Server (MX)
       const tdMx = document.createElement("td");
       tdMx.className = "mx-cell";
-      if (item.mx_host) {
-        tdMx.textContent = item.mx_host;
-      } else {
-        tdMx.textContent = "—";
-      }
+      tdMx.textContent = item.mx_host || "—";
       tr.appendChild(tdMx);
 
-      // Column 5: Reason & Details
       const tdReason = document.createElement("td");
       tdReason.className = "reason-cell";
-      tdReason.textContent = item.reason || "Validation completed.";
+      tdReason.textContent = item.reason || "Checked.";
       tr.appendChild(tdReason);
 
       resultsTableBody.appendChild(tr);
     });
   }
 
-  /**
-   * Handle primary "Check Emails" submission
-   */
   async function handleCheckEmails() {
     hideError();
     const emails = extractEmails(emailInput.value);
 
     if (emails.length === 0) {
-      showError("Please enter at least one valid email address to verify.");
+      showError("Please enter at least one email address.");
       emailInput.focus();
       return;
     }
 
     if (emails.length > MAX_LIMIT) {
-      showError(`Batch size exceeded. You entered ${emails.length} addresses, but the maximum limit is ${MAX_LIMIT}.`);
+      showError(`Maximum limit is ${MAX_LIMIT} emails.`);
       return;
     }
 
-    setLoadingState(true);
+    setLoading(true);
 
     try {
-      const response = await fetch("/api/check", {
+      const res = await fetch("/api/check", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ emails: emails })
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Server returned an error during verification.");
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to check emails.");
       }
 
-      // Populate summary metrics
       countTotal.textContent = String(data.summary.total);
       countDeliverable.textContent = String(data.summary.deliverable);
       countBounce.textContent = String(data.summary.bounce);
       countUnknown.textContent = String(data.summary.unknown);
 
-      // Store results
       currentResults = data.results || [];
       currentFilter = "all";
       currentSearchQuery = "";
       tableSearchInput.value = "";
 
-      // Reset filter pills UI
       filterPills.forEach(pill => {
         if (pill.dataset.filter === "all") pill.classList.add("active");
         else pill.classList.remove("active");
       });
 
       renderTableRows();
-
-      // Show results section and scroll smoothly into view
       resultsSection.style.display = "block";
       resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
-      showError(err.message || "Failed to communicate with the verification server. Please try again.");
+      showError(err.message || "Something went wrong while connecting to the server.");
     } finally {
-      setLoadingState(false);
+      setLoading(false);
     }
   }
 
-  /**
-   * Export results as CSV using backend endpoint
-   */
   async function handleDownloadCsv() {
     if (!currentResults || currentResults.length === 0) {
-      showError("No results available to download.");
+      showError("No results to download.");
       return;
     }
 
     try {
-      const response = await fetch("/api/export-csv", {
+      const res = await fetch("/api/export-csv", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ results: currentResults })
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate CSV export file.");
+      if (!res.ok) {
+        throw new Error("CSV generation failed.");
       }
 
-      const blob = await response.blob();
+      const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.style.display = "none";
       a.href = url;
-      a.download = `email_deliverability_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `email_deliverability_report.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
     } catch (err) {
-      showError("Error exporting CSV: " + err.message);
+      showError("Error downloading CSV: " + err.message);
     }
   }
 
-  // Event Listeners
   emailInput.addEventListener("input", updateCounter);
 
   loadSampleBtn.addEventListener("click", () => {
@@ -371,7 +312,6 @@ document.addEventListener("DOMContentLoaded", () => {
   checkBtn.addEventListener("click", handleCheckEmails);
   downloadCsvBtn.addEventListener("click", handleDownloadCsv);
 
-  // Filter Pill buttons
   filterPills.forEach(pill => {
     pill.addEventListener("click", () => {
       filterPills.forEach(p => p.classList.remove("active"));
@@ -381,12 +321,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Table search input filter
   tableSearchInput.addEventListener("input", (e) => {
     currentSearchQuery = e.target.value.trim();
     renderTableRows();
   });
 
-  // Initial counter setup
   updateCounter();
 });

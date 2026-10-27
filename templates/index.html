@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Deliverability Checker - Free, Non-Intrusive Mailbox Verification</title>
-  <meta name="description" content="Verify email deliverability risk without sending actual emails. Inspect syntax, DNS MX records, and safe SMTP probes.">
+  <title>Email Deliverability Checker</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,46 +11,41 @@
 </head>
 <body>
 
-  <!-- Top Navigation / Brand Header -->
   <header class="app-header">
     <div class="container header-container">
       <div class="brand">
         <div class="brand-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             <path d="m9 12 2 2 4-4"/>
           </svg>
         </div>
         <div class="brand-text">
           <h1>Email Deliverability Checker</h1>
-          <span class="badge badge-light">Safe &amp; Non-Intrusive</span>
         </div>
       </div>
       <div class="header-badges">
         <span class="system-status">
           <span class="status-dot {% if smtp_enabled %}status-dot-active{% else %}status-dot-warning{% endif %}"></span>
           {% if smtp_enabled %}
-            SMTP Probing: Active
+            SMTP: Active
           {% else %}
-            SMTP Probing: Passive (MX Only)
+            SMTP: MX Only
           {% endif %}
         </span>
       </div>
     </div>
   </header>
 
-  <!-- Main Content Layout -->
   <main class="container main-content">
 
-    <!-- Hero Introduction -->
     <section class="hero-section">
-      <h2>Analyze Email Deliverability Without Sending a Message</h2>
+      <h2>Check Email Deliverability Without Sending Emails</h2>
       <p class="hero-description">
-        Paste a list of email addresses below to evaluate bounce risks. Our multi-stage inspection checks syntax compliance, resolves authoritative DNS MX mail exchangers, and conducts safe recipient-level checks without ever issuing SMTP <code>DATA</code> or sending messages.
+        Paste a list of email addresses to test whether they are likely to reach an inbox, bounce, or stay unknown. Checks formatting, queries domain MX records, and runs a safe SMTP handshake without sending any messages.
       </p>
 
-      <!-- Transparency & Accuracy Alert -->
-      <div class="notice-banner" role="region" aria-label="Important Note on Verification Accuracy">
+      <div class="notice-banner">
         <div class="notice-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
@@ -60,47 +54,42 @@
           </svg>
         </div>
         <div class="notice-body">
-          <strong>Important Accuracy &amp; Host Limitations:</strong> Mailbox existence cannot be 100% guaranteed. Modern mail servers frequently employ catch-all routing, greylisting, or intentionally conceal recipient existence to deter spammers. Furthermore, cloud platforms (e.g. Render, AWS, DigitalOcean) block outbound port 25, in which case valid domains will safely classify as <em>Unknown</em>.
+          <strong>Note on verification accuracy:</strong> Many mail servers (like Outlook or Yahoo) hide whether a mailbox exists to block spammers, and free cloud hosting like Render blocks port 25. In those cases, addresses with valid domains are safely marked as <em>Unknown</em>.
         </div>
       </div>
     </section>
 
-    <!-- Input Form Section -->
     <section class="card input-card">
       <div class="card-header">
         <div class="card-title-group">
           <h3>Enter Email Addresses</h3>
-          <p class="text-muted">Enter up to 100 email addresses, one address per line (commas and semicolons also supported).</p>
+          <p class="text-muted">Enter up to 100 emails, one per line (commas or semicolons work too).</p>
         </div>
-        <div class="email-counter" id="emailCounter" aria-live="polite">
+        <div class="email-counter" id="emailCounter">
           0 / 100 addresses
         </div>
       </div>
 
       <div class="card-body">
         <div class="form-group">
-          <label for="emailInput" class="sr-only">List of email addresses</label>
           <textarea
             id="emailInput"
             name="emails"
             rows="6"
             placeholder="alice@gmail.com&#10;invalid-format-address&#10;support@definitely-non-existent-domain-xyz987.org&#10;contact@github.com"
-            aria-describedby="emailInputHelp"
             spellcheck="false"
           ></textarea>
         </div>
 
-        <!-- Inline Error Banner -->
         <div id="errorAlert" class="alert alert-danger" style="display: none;" role="alert">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span id="errorMessage">Error text</span>
+          <span id="errorMessage"></span>
         </div>
 
-        <!-- Form Action Buttons -->
         <div class="form-actions">
           <div class="actions-left">
             <button type="button" id="checkBtn" class="btn btn-primary">
@@ -111,12 +100,12 @@
               </svg>
               <span id="btnText">Check Emails</span>
             </button>
-            <button type="button" id="loadSampleBtn" class="btn btn-outline" title="Populate with sample addresses to test all categories">
+            <button type="button" id="loadSampleBtn" class="btn btn-outline">
               Load Sample List
             </button>
           </div>
           <div class="actions-right">
-            <button type="button" id="clearInputBtn" class="btn btn-ghost" title="Clear entered emails">
+            <button type="button" id="clearInputBtn" class="btn btn-ghost">
               Clear Text
             </button>
           </div>
@@ -124,19 +113,16 @@
       </div>
     </section>
 
-    <!-- Progress / Loading Banner -->
-    <div id="loadingBanner" class="loading-container" style="display: none;" aria-live="assertive">
+    <div id="loadingBanner" class="loading-container" style="display: none;">
       <div class="spinner-large"></div>
       <div class="loading-text">
-        <h4>Inspecting deliverability...</h4>
-        <p>Running format checks, resolving DNS MX records, and evaluating mail exchanger status.</p>
+        <h4>Checking emails...</h4>
+        <p>Testing syntax, looking up MX records, and testing mail server response.</p>
       </div>
     </div>
 
-    <!-- Results Section (Visible after evaluation) -->
     <section id="resultsSection" class="results-section" style="display: none;">
 
-      <!-- Summary KPI Metric Cards -->
       <div class="summary-grid">
         <div class="summary-card card-total">
           <div class="summary-icon">
@@ -146,7 +132,7 @@
             </svg>
           </div>
           <div class="summary-content">
-            <div class="summary-label">Total Evaluated</div>
+            <div class="summary-label">Total Checked</div>
             <div class="summary-value" id="countTotal">0</div>
           </div>
         </div>
@@ -159,7 +145,7 @@
             </svg>
           </div>
           <div class="summary-content">
-            <div class="summary-label">Likely Deliverable</div>
+            <div class="summary-label">Likely deliverable</div>
             <div class="summary-value" id="countDeliverable">0</div>
           </div>
         </div>
@@ -173,7 +159,7 @@
             </svg>
           </div>
           <div class="summary-content">
-            <div class="summary-label">Likely to Bounce</div>
+            <div class="summary-label">Likely to bounce</div>
             <div class="summary-value" id="countBounce">0</div>
           </div>
         </div>
@@ -187,30 +173,26 @@
             </svg>
           </div>
           <div class="summary-content">
-            <div class="summary-label">Unknown / Inconclusive</div>
+            <div class="summary-label">Unknown</div>
             <div class="summary-value" id="countUnknown">0</div>
           </div>
         </div>
       </div>
 
-      <!-- Results Table Card -->
       <div class="card results-table-card">
         <div class="card-header table-header-flex">
           <div class="table-title">
-            <h3>Detailed Results</h3>
+            <h3>Results</h3>
             <span class="text-muted" id="resultsCountSubtitle">Showing 0 results</span>
           </div>
           <div class="table-controls">
-            <!-- Filter Pills -->
-            <div class="filter-group" role="tablist" aria-label="Filter results by category">
+            <div class="filter-group">
               <button type="button" class="filter-pill active" data-filter="all">All</button>
               <button type="button" class="filter-pill" data-filter="Likely deliverable">Deliverable</button>
               <button type="button" class="filter-pill" data-filter="Likely to bounce">Bounce</button>
               <button type="button" class="filter-pill" data-filter="Unknown">Unknown</button>
             </div>
-            <!-- Search Filter -->
-            <input type="text" id="tableSearchInput" class="table-search" placeholder="Filter emails..." aria-label="Filter results table by email">
-            <!-- Action Buttons -->
+            <input type="text" id="tableSearchInput" class="table-search" placeholder="Search results...">
             <button type="button" id="downloadCsvBtn" class="btn btn-secondary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -219,36 +201,33 @@
               </svg>
               Download CSV
             </button>
-            <button type="button" id="clearResultsBtn" class="btn btn-ghost" title="Clear results">
+            <button type="button" id="clearResultsBtn" class="btn btn-ghost">
               Clear Results
             </button>
           </div>
         </div>
 
-        <!-- Responsive Table Container -->
         <div class="table-responsive">
           <table class="results-table" id="resultsTable">
             <thead>
               <tr>
-                <th scope="col" style="width: 50px;">#</th>
-                <th scope="col" style="min-width: 200px;">Email Address</th>
-                <th scope="col" style="width: 170px;">Status</th>
-                <th scope="col" style="min-width: 180px;">Mail Server (MX)</th>
-                <th scope="col" style="min-width: 320px;">Reason &amp; Diagnostic Details</th>
+                <th style="width: 50px;">#</th>
+                <th style="min-width: 200px;">Email</th>
+                <th style="width: 170px;">Status</th>
+                <th style="min-width: 180px;">Mail Server</th>
+                <th style="min-width: 320px;">Details</th>
               </tr>
             </thead>
             <tbody id="resultsTableBody">
-              <!-- Dynamically populated via script.js -->
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- Educational Guide: What the Categories Mean -->
     <section class="card guide-card">
       <div class="card-header">
-        <h3>How to Interpret Deliverability Classifications</h3>
+        <h3>What the statuses mean</h3>
       </div>
       <div class="card-body guide-grid">
         <div class="guide-item guide-item-deliverable">
@@ -256,9 +235,8 @@
             <span class="badge badge-deliverable">Likely deliverable</span>
           </div>
           <p>
-            The email address passed syntax validation, authoritative DNS MX records were resolved, and the recipient mail server responded positively during validation handshake.
+            The email format is valid, domain has working MX servers, and the mail server gave a positive response during check. Delivery is probable, though internal spam filters or user storage limits can still affect it.
           </p>
-          <span class="guide-note">Delivery is probable, but spam filters or end-user quota policies can still cause rejection.</span>
         </div>
 
         <div class="guide-item guide-item-bounce">
@@ -266,9 +244,8 @@
             <span class="badge badge-bounce">Likely to bounce</span>
           </div>
           <p>
-            The address format is syntactically invalid, the recipient domain does not exist in DNS (NXDOMAIN), lacks mail servers, or the mail server explicitly rejected the recipient mailbox (e.g. 550 Mailbox not found).
+            The address format is bad, the domain does not exist (NXDOMAIN), has no mail servers configured, or the mail server explicitly rejected the recipient mailbox (e.g. 550 User Unknown).
           </p>
-          <span class="guide-note">Sending to this address carries a high risk of hard bounce.</span>
         </div>
 
         <div class="guide-item guide-item-unknown">
@@ -276,25 +253,23 @@
             <span class="badge badge-unknown">Unknown</span>
           </div>
           <p>
-            The domain has valid mail servers, but mailbox existence could not be confirmed. Common reasons include: server greylisting, anti-spam protections hiding recipient status, connection timeouts, or outbound port 25 blocking by hosting providers.
+            The domain is real and has mail servers, but mailbox existence could not be confirmed because the server hides recipient status, timed out, greylisted the probe, or port 25 is blocked by hosting.
           </p>
-          <span class="guide-note">Exercise caution or perform double opt-in verification.</span>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Footer with Privacy Notice & Assignment Metadata -->
   <footer class="app-footer">
     <div class="container footer-content">
       <div class="privacy-notice">
-        <strong>Privacy &amp; Responsible Use Notice:</strong>
-        Submitted email addresses are processed strictly in-memory during request execution. No email addresses or results are stored in any database or written to disk logs. This tool never initiates the SMTP <code>DATA</code> phase and sends zero actual email messages.
+        <strong>Privacy Note:</strong>
+        Emails entered here are checked in memory and are never saved to a database or written to log files. This tool never sends actual emails.
       </div>
       <div class="footer-meta">
-        <span>Software Development Assignment &bull; Email Deliverability Checker</span>
-        <span>Built with Python Flask, dnspython, &amp; Vanilla JavaScript</span>
+        <span>Software Development Assignment - Email Deliverability Checker</span>
+        <span>Python Flask &amp; Vanilla JS</span>
       </div>
     </div>
   </footer>
