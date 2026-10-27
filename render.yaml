@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: email-deliverability-checker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: ENABLE_SMTP_CHECK
+        value: "false"  # Cloud platforms like Render block outbound port 25; setting false provides instant MX-based validation with clear status
+      - key: SECRET_KEY
+        generateValue: true
